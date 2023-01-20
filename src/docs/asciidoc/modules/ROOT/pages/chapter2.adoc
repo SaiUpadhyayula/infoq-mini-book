@@ -1,3 +1,328 @@
 [[chapter-2]]
-= Chapter 2
+= Building your First Spring Boot Application
+:toc:
+
+== Generating the Starter Project
+
+To get started with building Spring Boot applications, you can visit the Spring Initializer website at https://start.spring.io/
+
+image::SpringInitializr.png[Spring Initializr website]
+
+In the website, select the following options:
+
+* *Project*: Maven (You can also use Gradle if you are comfortable with it)
+* *Spring Boot*: We are going to use the latest version - 3.0.1 at the time of writing this book.
+* *Language*: Java
+* *Project Metadata*: (You can provide any values as you like)
+  ** *Group*: com.programming.techie
+  ** *Artifact*: expense-tracker
+  ** *Name*: expense-tracker
+  ** *Description*: Expense Tracker Application
+  ** *Packaging*: Jar
+  ** *Java*: 17 (The latest LTS version at the time of writing this book)
+
+After adding the project metadata, now it's time to select the dependencies we are going to use in our `Expense Tracker` application.
+
+image::SpringInitializr_With_Dependencies.png[Spring Initializr with Dependencies]
+* *Dependencies*:
+  ** *Spring Web* - adds support to develop MVC based web applications as well as RESTful applications.
+  ** *Spring Data MongoDB* - Adds support for integrating with the MongoDB.
+  ** *Lombok* - Adds support to Java annotation Library which reduces the boilerplate we have to write in Java
+  ** *Spring Boot Dev Tools* - Adds support for LiveReload
+  ** *Validation* - Adds the Hibernate Validator Support
+  ** *Testcontainers* - Provides lightweight throwaway instances of common databases, message queues, Selenium Web browers, etc.
+
+After choosing all the above-mentioned options, you can go ahead and click on the `Generate` button to download the starter code as a Zip file.
+
+TIP: You can also view the generated starter code by clicking on the `Explore` button, this will open a popup showing all the files you are about to download.
+
+Once you have downloaded the starter code, you can open them in your favourite IDE like VS Code, Intellij IDEA, Eclipse, Netbeans (or) whatever IDE you are using ;)
+
+== Exploring the Project Structure
+
+If you extract the zip file, you can find the following Project Structure for the Spring Boot Application
+
+[source]
+----
+|src
+|-- main
+    |-- java
+    |-- resources
+|-- test
+    |-- java
+| pom.xml
+----
+
+This is the standard project structure for any Java project based, if you are using Maven as your build tool, then you will have a pom.xml file inside the root folder of the project.
+
+This `pom.xml` contains all the metadata of the project like `groupId`, `artifactId`, `version`, `dependency`, `plugins` etc.
+
+This is how the `pom.xml` looks like:
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent> <1>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.0.1</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent>
+  <groupId>com.programming.techie</groupId>
+  <artifactId>expense-tracker</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>expense-tracker</name>
+  <description>Expense Tracker Application</description>
+  <properties>
+    <java.version>17</java.version>
+    <testcontainers.version>1.17.6</testcontainers.version>
+  </properties>
+  <dependencies> <2>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-mongodb</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-devtools</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>mongodb</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <dependencyManagement> <3>
+    <dependencies>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <plugins> <4>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
+----
+<1> The first thing you can observe inside the `pom.xml` file is the `<parent>` tag which defines a parent for this project. The `spring-boot-starter-parent` project is defined as a default parent for all the Spring Boot Projects ,and this project contains all the necessary libraries to run the project as a Spring Boot Application.
+
+<2> The `<dependencies>` tag helps us to define the libraries we want to include in our project as individual `<dependency>`, here you can observe that we have some starter libraries like `spring-boot-starter-data-mongodb`, `spring-boot-starter-validation`, `spring-boot-starter-web` which brings in the necessary functionalities to our Spring Boot project.
+
+<3> The `<dependencyManagement>` is generally used to manage the version of the dependencies in the projects, have a look at the next section to understand more about this.
+
+<4> We have also some plugins defined under the `<plugins>` section, the `spring-boot-maven-plugin` is used to create a JAR file for our application.
+
+== Dependency Management in Maven Projects
+
+Let's understand why we need the `<dependencyManagement>` tag and how it works. Imagine that we have the following Maven Project Structure:
+
+[source]
+----
+Parent Maven Project
+  - Child Maven Project 1
+  - Child Maven Project 2
+  - Child Maven Proejct 3
+----
+
+Now in these 3 Child Maven Projects, if you are using the following dependency:
+
+[source, xml]
+----
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+      <version>1.17.6</version>
+    </dependency>
+----
+
+Then it's hard to maintain a single version of this dependency (1.17.6) across all the child projects, if a developer decides to change this version of the dependency in a child project for some reason, then we have potentially different version of the same dependency, which can cause weird issues.
+
+For this reason a good practice is to create a Parent Project usually called as a BOM (Bills of Material) where you define the required dependencies and their version.
+
+
+And then, inside the child project, add the parent project bom under the `<dependencyManagement>` section. Now all you need to do is to define the above mentioned dependency without using the `<version>` tag, and Maven will automatically read the `<version>` from the project mentioned inside the `<dependencyMangement>` section.
+
+For this reason, you can observe that the version for `junit-jupiter` dependency is not defined inside our `pom.xml` file. The version of this dependency is managed by the `<testcontainers-bom>` project.
+
+TIP: You can view the contents of the dependencies like `spring-boot-starter-web`, `spring-boot-starter-parent` by pressing the `Ctrl` button and clicking on the dependency name, many modern IDE's provide the functionality to download the required dependencies and opens the `pom.xml` file automatically.
+
+== Exploring the SpringBootApplication main class
+
+Under the src->main->java-><your-package>, you should find the primary class which is responsible to start our Spring Boot Application, in our project this is named as `ExpenseTrackerApplication`.
+
+This is how our `ExpenseTrackerApplication ` looks like :
+
+[source,java]
+----
+package com.programming.techie.expensetracker;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication <1>
+public class ExpenseTrackerApplication {
+
+	public static void main(String[] args) { <2>
+		SpringApplication.run(ExpenseTrackerApplication.class, args);
+	}
+
+}
+----
+
+<1> The first thing you can observe is the `@SpringBootApplication` annotation, which is the main annotation responsible to define our application as a Spring Boot application.
+
+<2> Inside the main method, we have the `SpringApplication.run(..)` which is responsible to take the input arguments and launch our application.
+
+The `@SpringBootApplication` annotation does a lot of things for us in the background, it uses a mechanism called `AutoConfiguration` to scan all the libraries defined inside our `pom.xml` (or) `build.gradle` (equivalent of `pom.xml` when using Gradle) and automatically configure the required objects to use them in our application.
+
+For example, when we define the `spring-boot-starter-web` inside the pom.xml file, Spring Boot will automatically create objects (also called as `Beans`) to create an Embedded Tomcat container, to enable JSON support in our application, etc.
+
+Prior to Spring Boot, we used to define all these beans manually which used to be a lot of overhead while developing applications.
+
+This is how the `@SpringBootApplication` annotation looks like if you inspect it:
+
+[source,java]
+----
+@SpringBootApplication annotation , which is a composed annotation.
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan(excludeFilters = {
+                @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+                @Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) })
+public @interface SpringBootApplication {
+    ....
+    ....
+}
+----
+
+`@EnableAutoConfiguration` is the annotation which is responsible to add the AutoConfiguration capabilities to our Spring Boot Application.
+
+Now if you run the `ExpenseTrackerApplication` class in your IDE, you can observe the following output:
+
+[source]
+----
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.0.1)
+
+2023-01-20T16:53:41.595+01:00  INFO 21860 --- [           main] c.p.t.e.ExpenseTrackerRestApiApplication : Starting ExpenseTrackerRestApiApplication using Java 17.0.1 with PID 21860 (F:\playground\expense-tracker-rest-api\target\classes started by subra in F:\playground\expense-tracker-rest-api)
+2023-01-20T16:53:41.599+01:00  INFO 21860 --- [           main] c.p.t.e.ExpenseTrackerRestApiApplication : No active profile set, falling back to 1 default profile: "default"
+2023-01-20T16:53:42.023+01:00  INFO 21860 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data MongoDB repositories in DEFAULT mode.
+2023-01-20T16:53:42.034+01:00  INFO 21860 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 8 ms. Found 0 MongoDB repository interfaces.
+2023-01-20T16:53:42.299+01:00  INFO 21860 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+......
+......
+......
+2023-01-20T16:53:43.197+01:00  INFO 21860 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+2023-01-20T16:53:43.204+01:00  INFO 21860 --- [           main] c.p.t.e.ExpenseTrackerRestApiApplication : Started ExpenseTrackerRestApiApplication in 1.863 seconds (process running for 2.304)
+----
+
+You can observe that an Embedded Tomcat Webserver is started automatically at the default port - 8080.
+
+You can change the default port from 8080 to any arbitary port by adding the following property under the `src/main/resources/application.properties` file.
+
+[source]
+----
+server.port=8081
+----
+
+If you restart the application after adding the above property, you can observe that our application now start at port - 8081.
+
+[source]
+----
+
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.0.1)
+
+2023-01-20T17:01:36.347+01:00  INFO 26396 --- [           main] c.p.t.e.ExpenseTrackerRestApiApplication : Starting ExpenseTrackerRestApiApplication using Java 17.0.1 with PID 26396 (F:\playground\expense-tracker-rest-api\target\classes started by subra in F:\playground\expense-tracker-rest-api)
+2023-01-20T17:01:36.351+01:00  INFO 26396 --- [           main] c.p.t.e.ExpenseTrackerRestApiApplication : No active profile set, falling back to 1 default profile: "default"
+2023-01-20T17:01:36.770+01:00  INFO 26396 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data MongoDB repositories in DEFAULT mode.
+2023-01-20T17:01:36.786+01:00  INFO 26396 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 7 ms. Found 0 MongoDB repository interfaces.
+2023-01-20T17:01:37.059+01:00  INFO 26396 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8081 (http)
+2023-01-20T17:01:37.073+01:00  INFO 26396 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2023-01-20T17:01:37.073+01:00  INFO 26396 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.4]
+2023-01-20T17:01:37.141+01:00  INFO 26396 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2023-01-20T17:01:37.141+01:00  INFO 26396 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 756 ms
+....
+....
+....
+2023-01-20T17:01:37.976+01:00  INFO 26396 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8081 (http) with context path ''
+2023-01-20T17:01:37.982+01:00  INFO 26396 --- [           main] c.p.t.e.ExpenseTrackerRestApiApplication : Started ExpenseTrackerRestApiApplication in 1.91 seconds (process running for 2.373)
+----
+
+The `application.properties` is the place where you can define different properties to configure your Spring Boot Application.
+
+For example, you can define the database connection URL and credential information under the `application.properties` file, also if you want to define a custom property like an external URL, then you can define them inside this file.
+
+TIP: Instead of using a properties file, you can also define a yml file if you are more inclined to write YAML. Then it should be defined as `application.yml` instead of `application.properties`
+
+
+== Summary
+
+In this chapter you learned how to generate a Spring Boot Project using the Spring Initializr website, and then we explore the package structure, understood how the dependencies are managed inside the `pom.xml` file. We understood how a basic Spring Boot application looks like and configured and finally we ran the Spring Boot Application.
+
+In the next section, we are going to start understanding the fundamentals of REST and start creating the REST API using Spring Boot.
+
+
 :page-pagination:

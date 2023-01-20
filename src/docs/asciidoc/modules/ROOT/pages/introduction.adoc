@@ -1,1 +1,31 @@
 = Introduction
+:toc:
+
+Spring Boot has literally revolutionized the way Java applications are built.
+
+It's a widely used Java Framework in the industry and helps in rapid development of Web, REST based applications. In the modern software development world, microservices became very popular and as many of these microservices are built as RESTful APIs, it's essential to understand and learn how to build robust REST APIs.
+
+In this ebook, you will learn how to "Build a REST API with Spring Boot".
+
+This is a beginner level book, we will start with fundamentals of Spring Boot, fundamentals of REST API, and gradually we will dive into advanced REST API concepts and learn how to implement them using Spring Boot.
+
+== What are you going to build ?
+
+I always believe in the approach "Learn by building". So instead of simply using individual code snippets and examples, as the title suggests, we are going to build a REST API for an `Expense Tracker` application where users can track their expenses.
+
+== Technologies used in the Expense Tracker application
+
+The `Expense Tracker` application is built using the following technologies:
+
+* Spring Boot
+* MongoDB
+* Open API 3.0 for REST API Documentation
+* Junit5 for writing Unit Tests
+* Testcontainers for Integration Tests
+
+== Source code
+
+You can find the source code for this ebook in Github at - https://github.com/SaiUpadhyayula/expense-tracker-rest-api
+
+
+In the next chapter, we will start our journey by learning the fundamentals of Spring Boot.

@@ -1,3 +1,121 @@
 [[chapter-3]]
-= Chapter 3
-:page-pagination: previous
+= Understanding REST Fundamentals
+:toc:
+
+REST stands for REpresentational State Transfer, this term was coined by Roy Fielding.
+
+REST is an architectural style for building distributed systems that provide interoperability between heterogeneous systems.
+
+It defines a way of interaction between different kinds of client in a uniform way.
+
+In the recent times there are multiple clients like Mobile Devices, Single Page Applications, Desktop Applications, IOT Devices which consume data from the backend. Instead of developing standalone services for each client, we can develop an API which follows RESTful conventions and use that API for all the clients which also consumes this API using the RESTful conventions.
+
+You can learn more about REST at this link - https://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm
+
+A key term comes up whenever we are talking about a RESTful API, and that is called as a `Resource`.
+
+A `Resource` can be identified as any information which is exposed to the Web and which can be referred using a unique identifier.
+
+Our Expense Tracker application is used to keep track and maintain the Expenses, so in our case an Expense can be defined as a Resource, and the URL to access that resource can be identified as a Unique Identifier. For example, we can define a URL to read a particular expense like below:
+
+[source]
+----
+http://localhost:8080/api/expense/1
+----
+
+== HTTP Verbs
+
+We can denote any action performed on a `Resource` in the form of HTTP Verbs like below:
+
+* GET - Operation to Get (or) Read a Resource
+* POST - Operation to Create a Resource
+* PUT - Operation to Update a Resource
+* PATCH - Operation to Update a Part of a Resource instead of whole Resource.
+* DELETE - Operation to Delete a Resource
+
+These are the most widely used HTTP Verbs in the world of RESTful APIs.
+
+== URL Representation of HTTP Verbs
+
+Now let's see how a standard URL looks like for each of the above-mentioned HTTP Verbs, which can be identified as a HTTP Method:
+
+[cols="1,1,1"]
+|===
+|HTTP Verb | URI | Action
+
+|GET
+|http://localhost:8080/api/expense/{expenseId}
+|Get Expense with HTTP Status 200
+
+|POST
+|http://localhost:8080/api/expense
+|Creates Expense specified inside Request Body, return HTTP Status 201 and the URI of the created `Resource` in the `Location` Header
+
+|PUT
+|http://localhost:8080/api/expense/{expenseId}
+|Update Expense specified inside Request Body, return HTTP Status 200
+
+|PATCH
+|http://localhost:8080/api/expense/{expenseId}
+|Partially Update Expense specified inside Request Body, return HTTP Status 200
+
+|DELETE
+|http://localhost:8080/api/expense
+|Delete Expense specified inside Request Body, return HTTP Status 200
+
+|===
+
+== REST URL Naming Conventions
+
+There are some pre-defined conventions which we have to follow to define the URL of the REST API.
+
+=== Use Nouns instead of verbs
+
+As we know, APIs are always designed around Resources, so in our example it's going to be the `Expense` class.
+
+Any kind of operations we are going to perform against those resources should be defined through the HTTP Verbs like (**GET**, **POST**, **PUT**, **DELETE**)
+
+Instead of specifying the action inside the URL, it's a good practice to just use the name of the Resource instead of specifying the action.
+
+For example:
+
+If you want to define the URL for the Add Expense Endpoint, instead of naming the URL as `/api/expense/add` we are going to name it as `/api/expense/` and the action is taken care by the corresponding HTTP Verb we will use, in this case it's going to be **POST**.
+
+=== Use Lowercase Letters
+
+Lowercase Letters should be preferred for the URI's as much as possible. According to [RFC-3986](https://www.ietf.org/rfc/rfc3986.txt) URIs are case-sensitive except for the scheme(http/https) and Host components (hostname of the server).
+
+=== Do not use file extensions
+
+If you want to access a file, never use the extension as part of the URI, this is because URI should be independent of the implementation.
+
+For example instead of defining the URL for a pdf file like below:
+
+`/api/expense/report.pdf`
+
+Define it like below:
+
+`/api/expense/report`
+
+In the above case, we will communicate our intent that we need a PDF file through the HTTP `Content-Type` header, by using the **Media Type** parameter in the HTTP Response and by using the **Accept** Header in the request.
+
+You can find much more API Guidelines like these in this link - https://opensource.zalando.com/restful-api-guidelines/#table-of-contents
+
+NOTE: Please note that these are Guidelines defined by Zalando according to their requirements, take this as opinionated set of guidelines, but not as strict rules to follow.
+
+== Content Negotiation by RESTful Webservices
+
+RESTful Web Services can support both XML (or) JSON payloads as the Request Body.
+
+But the majority of the modern services communicate with RESTful backends in the form of JSON (Javascript Object Notation)
+
+
+== Summary
+
+In this chapter, we learned the basics of REST and understood the different terminogies associated with REST.
+
+We learned some best practices involved in representing the Resource URL and learned what are the different Request Body types supported by REST services.
+
+In the next chapter, we will start with the implementation of our Expense Tracker Application.
+
+:page-pagination: next

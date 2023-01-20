@@ -1,5 +1,29 @@
 [[chapter-1]]
-= Chapter 1
-:page-pagination: next
+= What is Spring Boot ?
 
-image:infoq-jvm-2021.png[]
+Spring Boot is an opinionated Java Framework which is used to build robust web applications and REST APIs.
+
+Spring Boot was developed to make it easy to build applications using `Spring Framework`, which started off as a Dependency Injection Framework but grew into much bigger than that by spawning many other projects like :
+
+* Spring MVC - used to build MVC based web applications and RESTful web services
+* Spring Security - used to secure the applications built on top of Spring Framework
+* Spring Cloud - used to develop distributed systems by implementing commonly used design patterns like Service Discovery, Configuration Management, API Gateway, Circuit Breaker, Observability, etc.
+* Spring Integration - used to provide various support for Enterprise Integration Patterns like SFTP, AMQP, JMS, etc.
+* Spring WebFlux - used to develop web applications using the Reactive Programming paradigm by building on top of Project Reactor.
+
+There are many more projects under the Spring Project Umbrella - you can track all those projects at the link - https://spring.io/projects
+
+== Features of Spring Boot
+
+Spring Boot helps us in rapid development of the applications by providing various features like:
+
+* Embedded Web Servers like Tomcat, Jetty and Undertow
+* Providing various `starter` libraries and configuring them automatically using the feature called as "Auto Configuration".
+
+and many more.
+
+You can refer to Spring Boot Reference Documentation to learn more about Spring Boot - https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/
+
+In the next chapter, we will start by building your First Spring Boot Application.
+
+:page-pagination: next

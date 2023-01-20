@@ -1,0 +1,436 @@
+[[chapter-4]]
+= Building REST API using Spring Boot
+:toc:
+
+Let's go ahead and start developing our Expense Tracker REST API.
+
+We will start by creating the domain model of our Expense Tracker Application.
+
+== Domain Model
+
+An Expense Tracker Application can have the following domain classes:
+
+* Expense
+* ExpenseCategory
+* User
+
+Here is how we can model the `Expense.java` class:
+
+[source,java]
+----
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Expense {
+    private String id;
+    private String expenseName;
+    private ExpenseCategory expenseCategory;
+    private BigDecimal expenseAmount;
+}
+----
+
+This is a simple Plain Old Java Object (POJO) class, but with a twist, you can observe that we don't have usual blocks of Java code like No-Args and Argument Constructor, Getter/Setter, etc.
+
+These are all generated at compile-time using the library we added in chapter-2 called as `lombok` which will help us by generating the Java Boiler Plate code.
+
+You can observe the annotations `@Getter`, `@Setter`, `@AllArgsConstructor`, `@NoArgsConstructor` they are pretty self-explanatory.
+
+`@Builder` annotation generates the necessary code to implement the `Builder` design pattern. You can learn more about `Builder Design Pattern` here - https://refactoring.guru/design-patterns/builder
+
+The `Expense.java` class defines a field of type `ExpenseCategory` which is a Java Enum that looks like below:
+
+[source,java]
+----
+public enum ExpenseCategory {
+    ENTERTAINMENT, GROCERIES, RESTAURANT, UTILITIES, MISC
+}
+----
+
+Finally, we have the `User.java` class which looks like below:
+
+[source, java]
+----
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Expense {
+    private String id;
+    private String userName;
+    private String password;
+    private String email;
+}
+----
+
+After defining the domain model, we can now start creating the REST Endpoints.
+
+== Installing MongoDB
+
+As mentioned we will be using MongoDB as our database, you can install MongoDB either by using Docker (or) manually.
+
+You can find the resources to download and install MongoDB Community Edition here - https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-windows/
+
+== Configuring MongoDB in Expense Tracker Application
+
+After installing MongoDB, the next step is to configure our Expense Tracker Application with MongoDB.
+
+We can do that by adding the following properties to the `application.properties` (or) `application.yml` file.
+
+[source, properties]
+----
+spring.data.mongodb.uri=mongodb://localhost:27017/expense-tracker
+----
+
+The `spring.data.mongodb.uri` contains all the necessary information required to configure the MongoDB in our application.
+
+NOTE: MongoDB by default runs on port - 27017, if you chose to install it in different port, make sure to use the same port in the URI.
+
+
+== Creating Repositories using Spring Data
+
+The next step is to create the logic to define the classes which are responsible to store the information in the MongoDB.
+
+Spring Boot has a project called as `Spring Data`, that abstracts away the logic to write the usual database operations code.
+
+It implements the famous Repository Pattern, which you can learn more about in this article - https://martinfowler.com/eaaCatalog/repository.html
+
+By using `Spring Data` all you have to do is create an interface called as `ExpenseRepository.java` and extend the interface with `MongoRepository.java`.
+
+This is how the code for `ExpenseRepository.java` looks like:
+
+[source, java]
+----
+package com.programming.techie.expensetracker.repository;
+
+import com.programming.techie.expensetracker.model.Expense;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+
+import java.util.Optional;
+
+
+public interface ExpenseRepository extends MongoRepository<Expense, String> { <1>
+    @Query("{'name': ?0}") <3>
+    Optional<Expense> findByName(String name); <2>
+}
+
+----
+
+The `MongoRepository.java` brings in lot of functionality to our `ExpenseRepository.java` class,
+
+[source,java]
+----
+package org.springframework.data.mongodb.repository;
+
+import java.util.List;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.repository.ListCrudRepository;
+import org.springframework.data.repository.ListPagingAndSortingRepository;
+import org.springframework.data.repository.NoRepositoryBean;
+import org.springframework.data.repository.query.QueryByExampleExecutor;
+
+@NoRepositoryBean
+public interface MongoRepository<T, ID> extends ListCrudRepository<T, ID>, ListPagingAndSortingRepository<T, ID>, QueryByExampleExecutor<T> {
+    <S extends T> S insert(S entity);
+
+    <S extends T> List<S> insert(Iterable<S> entities);
+
+    <S extends T> List<S> findAll(Example<S> example);
+
+    <S extends T> List<S> findAll(Example<S> example, Sort sort);
+}
+
+----
+
+It inherits all the above-mentioned methods you see in the `MongoRepository.java` class, and `Spring Data` will provide implementations to this method at run-time.
+
+So you need not worry about opening a Database connection, writing the logic to perform necessary database operations and finally closing the Database Connection. Everything is handled for us by `Spring Data`. Pretty cool, right ?
+
+The next step is to map our Domain Model classes to the Database, we can do that by adding the `@Document` annotation on top of our `Expense.java` class, as we are going to store the expense in the database.
+
+NOTE: In the traditional Relational Databses, we usually store the data inside the tables. In MongoDB, we do not use Tables, but store them in the form of Documents. That's why we have the `@Document` annotation to represent our Expense class as a MongoDB document.
+
+Here is how the `Expense.java` class looks like after adding the necessary annotations:
+
+[source,java]
+----
+package com.programming.techie.expensetracker.model;
+
+import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
+import java.math.BigDecimal;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Document("expense") <1>
+public class Expense {
+    @Id <2>
+    private String id;
+    @Field("name") <3>
+    @Indexed(unique = true) <4>
+    private String expenseName;
+    @Field("category")
+    private ExpenseCategory expenseCategory;
+    @Field("amount")
+    private BigDecimal expenseAmount;
+}
+
+----
+
+<1> As mentioned in the NOTE section above, we add the `@Document` to denote the `Expense` object as a MongoDB Document.
+<2> We define a primary key in our document, by using the `@Id` annotation, notice that the ID created by MongoDB is in the form of Binary Object Notation, you can read more about it here - https://www.mongodb.com/basics/bson
+<3> We can map each field inside our `Expense` class into the Mongodb document, with the help of the `@Field` annotation. For example, you can have the expense saved with fieldname - "category" instead of "expenseCategory".
+
+Alright, now we have the logic to store the expenses, but how do we receive the expenses from the clients into our application ? Who is responsible for this ? The answer is Controllers, let's create them in the next section.
+
+== Creating Controllers
+
+To start building the REST Endpoints, you need to get familiarized with the term called as `Controller`.
+
+Before that let's revisit the MVC Design Pattern
+
+[source]
+----
+
+                                         ___________________
+                                        |                   |
+                                        |        Model      | <2>
+                                         ___________________
+                                      /
+                                     /
+                 ___________________/
+                |                   |
+                |   Controller      | <1>
+                 ___________________
+                                     \
+                                      \
+                                       \
+                                         ___________________
+                                        |                   |
+                                        |        View       | <3>
+                                         ___________________
+----
+
+In the MVC Pattern, we have the main components - Model, View and Controllers.
+
+<1> The Controller is responsible to accept the requests coming from the external client and forwarding it to the application service layer.
+
+<2> The Model contains the information which is exposed by the webservice/application.
+
+<3> The View contains the response usually returned as response by the Controller. In a traditional web application, this can be an HTML page, but in RESTful applications, this can be just a JSON/XML payload as response.
+
+=== @RestController
+
+Spring Boot provides the functionality of the Controller in the MVC Design Pattern using the `@Controller` annotation, if you want to handle RESTful applications, then it has another annotation called `@RestController` which is nothing but a wrapper around the `@Controller` annotaion.
+
+By adding this annotation, Spring Boot will start listening to incoming requests to the application, and will start responding in the form of either JSON/XML.
+
+Let's create a class called as `ExpenseController.java`
+
+[source,java]
+----
+package com.programming.techie.expensetracker.web;
+
+import com.programming.techie.expensetracker.dto.ExpenseDto;
+import com.programming.techie.expensetracker.exception.ExpenseNotFoundException;
+import com.programming.techie.expensetracker.model.Expense;
+import com.programming.techie.expensetracker.service.ExpenseService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.List;
+
+@RestController <1>
+@RequestMapping("/api/expense")
+@RequiredArgsConstructor
+public class ExpenseController {
+
+    private final ExpenseService expenseService;
+
+    @PostMapping <2>
+    public ResponseEntity<Void> addExpense(@RequestBody ExpenseDto expenseDto) {
+        String expenseId = expenseService.addExpense(expenseDto);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(expenseId)
+                .toUri();
+        return ResponseEntity.created(location)
+                .build(); <3>
+    }
+
+    @PutMapping <5>
+    @ResponseStatus(HttpStatus.OK)
+    public void updateExpense(@RequestBody Expense expense) {
+        expenseService.updateExpense(expense);
+    }
+
+    @GetMapping <4>
+    @ResponseStatus(HttpStatus.OK)
+    public List<ExpenseDto> getAllExpenses() {
+        return expenseService.getAllExpenses();
+    }
+
+    @GetMapping("/{name}") <6>
+    @ResponseStatus(HttpStatus.OK)
+    public ExpenseDto getExpenseByName(@PathVariable String name) {
+        return expenseService.getExpense(name);
+    }
+
+    @DeleteMapping("/{id}") <7>
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteExpense(@PathVariable String id) {
+        expenseService.deleteExpense(id);
+    }
+
+}
+
+----
+
+<1> We annotate our class with `@RestController` and `@RequestMapping` annotations, so our `ExpenseController` can listen to the incoming requests starting with the path - `/api/expense`.
+
+<2> We can use the `@PostMapping` annotation to define the addExpense method as a POST Endpoint. You can also observe that we are using a `@RequestBody` annotation to denote that we are expecting a Body inside the HTTP Post Request. When the `@RequestBody` annotation is present, Spring Boot will automatically parse the incoming HTTP Request Body to the ExpenseDto object.
+
+<3> Inside the addExpense Method, we are processing the request, by passing the `expenseDto` object to the `addExpense` method of the `ExpenseService.java` class, after that we are creating a URI with the expenseId as the path-variable, and sending that URI as part of the `Location` header in the response. This is the standard way of implementing a response in RESTful applications, whenever you are creating a Resource.
+
+<4> We have the `@GetMapping` annotation to map the `getAllExpenses` which returns all the expenses we have in our application. Please note that we can use the `@ResponseStatus` annotation to define the HTTP Response Status we need to send back to the client.
+
+<5> We have the `@PutMapping` annotation which listens for HTTP PUT requests and executes the method `updateExpense` in the `ExpenseService` class.
+
+<6> We also have another `@GetMapping` annotation mapped to the `getExpenseByName` method, which as the name suggests retrieves a given expense by its name. Spring Boot provides the `@PathVariable` annotation to read the `name` from the URI and map it to the String variable.
+
+<7> Finally, we have a `@DeleteMapping` annotation mapped to the `deleteExpense` method, which takes in the `id` of the given expense which is again parsed using the `@PathVariable` annotation and passed to the `deleteExpense` method of the `ExpenseService`.
+
+NOTE: You can observe that we are using `@RequiredArgsConstructor` annotation which will generate the constructor at compile time with all the required arguments.
+
+Let's see how the `ExpenseDto.java` object looks like:
+
+[source,java]
+----
+package com.programming.techie.expensetracker.dto;
+
+import com.programming.techie.expensetracker.model.ExpenseCategory;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ExpenseDto {
+    private String id;
+    private String expenseName;
+    private ExpenseCategory expenseCategory;
+    private BigDecimal expenseAmount;
+}
+
+----
+
+`ExpenseDto.java` acts as a Data Transfer Object (DTO), whose responsibility is to transfer the data between the client and the server.
+
+.Why note use Expense class instead of ExpenseDto ?
+****
+You may ask why we have to create a seperate class called `ExpenseDto` to model the Request Body, when we are using almost same fields as `Expense`. Why not use `Expense` object itself ?
+
+That's a very valid question.
+
+There are 2 main reasons for using a Data Transfer Object:
+
+1. It's usually not advisable to expose your domain model to the external world, as it usually contains a lot of information which is not relevant to the clients.
+2. APIs evolve overtime and needs to handle different kinds of data which are not part of the Domain Model. For example, in the future we may want to add a different field in the Request Body, but we don't need to store it in the database. In that case, we can just add the field to the `ExpenseDto` and need not touch the `Expense` object.
+****
+
+Now let's also create a class called `ExpenseService.java` which is responsible to handle the actual business logic to perform CRUD operations for the Expense :
+
+[source, java]
+----
+package com.programming.techie.expensetracker.service;
+
+import com.programming.techie.expensetracker.dto.ExpenseDto;
+import com.programming.techie.expensetracker.model.Expense;
+import com.programming.techie.expensetracker.repository.ExpenseRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service <1>
+@RequiredArgsConstructor
+public class ExpenseService {
+
+    private final ExpenseRepository expenseRepository;
+
+    public String addExpense(ExpenseDto expenseDto) { <2>
+        Expense expense = mapFromDto(expenseDto);
+        return expenseRepository.insert(expense).getId();
+    }
+
+    public void updateExpense(Expense expense) {
+        Expense savedExpense = expenseRepository.findById(expense.getId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                String.format("Cannot Find Expense by ID %s", expense.getId())));
+        savedExpense.setExpenseName(expense.getExpenseName());
+        savedExpense.setExpenseCategory(expense.getExpenseCategory());
+        savedExpense.setExpenseAmount(expense.getExpenseAmount());
+
+        expenseRepository.save(expense);
+    }
+
+    public ExpenseDto getExpense(String name) {
+        Expense expense = expenseRepository.findByName(name)
+                .orElseThrow(() -> new RuntimeException(String.format("Cannot Find Expense by Name - %s", name)));
+        return mapToDto(expense);
+    }
+
+    public List<ExpenseDto> getAllExpenses() {
+        return expenseRepository.findAll()
+                .stream()
+                .map(this::mapToDto).collect(Collectors.toList());
+    }
+
+    public void deleteExpense(String id) {
+        expenseRepository.deleteById(id);
+    }
+
+    private ExpenseDto mapToDto(Expense expense) {
+        return ExpenseDto.builder()
+                .id(expense.getId())
+                .expenseName(expense.getExpenseName())
+                .expenseCategory(expense.getExpenseCategory())
+                .expenseAmount(expense.getExpenseAmount())
+                .build();
+    }
+
+    private Expense mapFromDto(ExpenseDto expense) {
+        return Expense.builder()
+                .expenseName(expense.getExpenseName())
+                .expenseCategory(expense.getExpenseCategory())
+                .expenseAmount(expense.getExpenseAmount())
+                .build();
+    }
+}
+
+----
+

@@ -1,12 +1,12 @@
 = My Book
-:book-title: {doctitle}
-:author: Your Name
-:email:  youremail@...
+:book-title: Building REST API with Spring Boot
+:author: Sai Upadhyayula
+:email:  programmingtechie@gmail.com
 :revnumber: 1.0
-:revdate: {docdate}
-:revyear: 2020
-:subject: Whatever
-:keywords: Something, Else
+:revdate: 20-01-2023
+:revyear: 2023
+:subject: Building REST API with Spring Boot
+:keywords: Spring Boot, REST API, REST
 :doctype: book
 :media: screen
 ifeval::["{media}" != "prepress"]
