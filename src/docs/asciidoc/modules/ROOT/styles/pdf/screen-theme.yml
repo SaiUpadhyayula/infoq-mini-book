@@ -99,7 +99,7 @@ title_page:
   font_style: bold
   font_color: 181818
   logo:
-    image: image:infoq.png[pdfwidth=40%]
+    image: image:cover.png[pdfwidth=40%]
     top: 27%
   title:
     top: 20%

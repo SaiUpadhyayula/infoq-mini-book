@@ -1,0 +1,213 @@
+[[chapter-5]]
+= Write Automated Tests for our REST API
+
+In the previous chapter, you learned how to build the REST API using Spring Boot, and we performed some manual tests using Postman HTTP Client.
+
+In this chapter, you will learn how to write Automated Unit and Integration Tests for your API using Junit 5, Spring Boot Test Support and Test  Containers.
+
+TestContainers provide us throw away instance of external infrastructure like Databases, Message Queues, Web Browsers, etc. Instead of using embedded versions of this software, we can run a docker container and test the application. In this way, we will test our application closer to production setup.
+
+
+== Unit Testing REST API using @WebMvcTest
+
+The Spring Test Framework which is part of the `spring-boot-starter-test` library provides us with an annotation called `@WebMvcTest` which is a specialized annotation that will create the Spring Context for us with only beans which are related to the Spring MVC components like `@Controller`,  `@RestController`, `@AutoconfigureWebMvc` etc.
+
+This is how the annotation looks like:
+
+[source,java]
+----
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@BootstrapWith(WebMvcTestContextBootstrapper.class)
+@ExtendWith({SpringExtension.class})
+@OverrideAutoConfiguration(
+    enabled = false
+)
+@TypeExcludeFilters({WebMvcTypeExcludeFilter.class})
+@AutoConfigureCache
+@AutoConfigureWebMvc
+@AutoConfigureMockMvc
+@ImportAutoConfiguration
+public @interface WebMvcTest {
+    ...
+    ...
+}
+----
+
+You can see that this annotation acts as a wrapper for many other annotations related to Spring MVC components, mainly you can observe the `@AutoconfigureMockMvc` annotations, which autoconfigures a Mocked Web Servlet Environment to run tests for our controllers.
+
+Using `@WebMvcTest` annotation, you can specifically test the behaviour of your Controllers.
+
+Here is how the test for `ExpenseController.java` class looks like, we create a class called `ExpenseControllerTest.java`:
+
+[source,java]
+----
+package com.programming.techie.expensetracker.web;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.programming.techie.expensetracker.dto.ExpenseDto;
+import com.programming.techie.expensetracker.model.ExpenseCategory;
+import com.programming.techie.expensetracker.service.ExpenseService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+
+import java.math.BigDecimal;
+import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+
+@WebMvcTest(controllers = ExpenseController.class) <1>
+class ExpenseControllerTest {
+
+    @MockBean <2>
+    private ExpenseService expenseService;
+    @Autowired <3>
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    @DisplayName("Should Create Expense") <4>
+    void shouldCreateExpense() throws Exception {
+        ExpenseDto expenseDto = ExpenseDto.builder()
+                .expenseCategory(ExpenseCategory.ENTERTAINMENT)
+                .expenseName("Movies")
+                .expenseAmount(BigDecimal.TEN)
+                .build();
+
+        Mockito.when(expenseService.addExpense(expenseDto)).thenReturn("123");
+
+        MvcResult mvcResult = mockMvc.perform(post("/api/expense") <5>
+                        .content(objectMapper.writeValueAsString(expenseDto)))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.header().exists(HttpHeaders.LOCATION))
+                .andReturn();
+
+        assertTrue(Objects.requireNonNull(mvcResult.getResponse().getHeaderValue(HttpHeaders.LOCATION))
+                .toString().contains("123"));
+
+    }
+}
+
+
+----
+
+<1> The `@WebMvcTest` annotation, takes the `ExpenseController.class` as the value for the `controllers` attribute. Spring Boot at the time of startup, will create the Application Context with the `ExpenseController` bean.
+<2> As we want to test the `ExpenseController.class` in isolation, we are going to mock the `ExpenseService.java` bean, with the `@MockBean` annotation.
+<3> We are going to autowire the `MockMvc` bean, which is autoconfigured already through our `@WebMvcTest` annotation.
+<4> Now in the `shouldCreateExpense` test, we first prepared an `ExpenseDto` object, by providing the test data. And then when the test executes the `expenseService.addExpense()` method, we return the `expenseDto` object as response using Mockito.
+<5> Finally, we are going to make use of `MockMvc` to make the call to our required endpoint, ie. /api/expense, using the `mockMvc.perform` method. Notice that, we converted the `expenseDto` object into a string using the `ObjectMapper`'s `writeValueAsString` method. After that we verify if we receive an HTTP Status - 201 (CREATED) response or not. And then we assert if there is a `Location` Header present in the response or not, and assert the value of the header.
+
+NOTE: While importing the `ObjectMapper` class in to the class, make sure to import the one from `com.fasterxml.jackson.databind.ObjectMapper` instead of `org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;`
+
+This is how we write unit tests for the Spring MVC Controllers. Now let's learn how to write tests Integration Tests by using `@SpringBootTest` annotation along with Test Containers.
+
+== Integration Testing with `@SpringBootTest`
+
+We can also write Integration Tests, by using the `@SpringBootTest` annotation, this will spinup the whole application context while running the tests.
+
+This is how the integration test looks like by using `TestContainers` to spinup the Mongodb.
+
+[source,java]
+----
+package com.programming.techie.expensetracker;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.programming.techie.expensetracker.dto.ExpenseDto;
+import com.programming.techie.expensetracker.model.ExpenseCategory;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+
+import java.math.BigDecimal;
+import java.net.URI;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT) <1>
+@AutoConfigureMockMvc <2>
+class ExpenseTrackerRestApiApplicationTests {
+
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Container <3>
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:6.0.4");
+
+    static {
+        mongoDBContainer
+                .start(); <4>
+    }
+
+    @DynamicPropertySource <5>
+    static void overrideProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
+    }
+
+    @Test
+    @DisplayName("Should Create Expense, and verify the expense by GET") <6>
+    void shouldCreateExpenseAndGetTheExpense() throws Exception {
+        ExpenseDto expenseDto = ExpenseDto.builder()
+                .expenseCategory(ExpenseCategory.ENTERTAINMENT)
+                .expenseName("Movies")
+                .expenseAmount(BigDecimal.TEN)
+                .build();
+
+        MvcResult mvcResult = mockMvc.perform(post("/api/expense")
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(objectMapper.writeValueAsString(expenseDto)))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.header().exists(HttpHeaders.LOCATION))
+                .andReturn();
+
+        String expenseUrl = mvcResult.getResponse().getHeaderValue(HttpHeaders.LOCATION).toString();
+
+        mockMvc.perform(get(new URI(expenseUrl))) <7>
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.expenseAmount").value(BigDecimal.TEN))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.expenseCategory").value(ExpenseCategory.ENTERTAINMENT.toString()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.expenseName").value("Movies"));
+
+    }
+
+}
+
+----
+
+<1> Here we defined the `@SpringBootTest` annotation, where we define the `webEnvironment` attribute as `SpringBootTest.WebEnvironment.RANDOM_PORT`, this will run the Spring Application Context on a random port, if we don't provide this property, it will try to start the context on the default port.
+<2> Similar to the unit test using `@WebMvcTest` we are using `MockMvc` to perform calls to our Controller endpoints, hence we are using the `@AutoconfigureMockMvc` annotation and auto-wired the bean in the test class.
+<3> Here you can observe the `@Container` annotation, which will take care of starting the `MongoDbContainer`. During the test startup, Testcontainers will check if there is a Mongodb docker image on our machine, with version 6.0.4 and will download the image if it does not exist.
+<4> Inside the `static` block, we are starting the container.
+<5> We can dynamically override the `spring.data.mongodb.uri` property in our application using the `@DynamicPropertySource` annotation, here we can get the URL of the MongoDB inside the docker container using the `mongoDbContiner::getReplicaSetUrl()` method.
+<6> Finally, we have our main test, which constructs the required `expenseDto` object and calls our `/api/expense` endpoint, and we verify whether the expense is created our not.
+<7> We can verify the expense by using the URL which is returned inside the `Location` header. We make the call to the expense URL using the `mockMvc.perform()` and verify the JSON response by asserting the fields `expenseName`, `expenseAmount` and `expenseCategory`.
+
+== Summary
+
+In this chapter, you learned how to write Unit and Integration Tests for your REST API and learned how to work with Testcontainers.
+
+In the next chapter, we will learn how to document our REST APIs using `OpenAPI`.

@@ -1,4 +1,4 @@
-= My Book
+= Building REST API with Spring Boot
 :book-title: Building REST API with Spring Boot
 :author: Sai Upadhyayula
 :email:  programmingtechie@gmail.com
@@ -22,7 +22,7 @@ endif::[]
 :pdf-fontsdir: {docdir}/styles/pdf/fonts
 :pdf-themesdir: {docdir}/styles/pdf
 :pdf-theme: screen
-ifndef::ebook-format[:leveloffset: 1]
+ifndef::+ebook-format+[:leveloffset: 1]
 
 [colophon#colophon%nonfacing]
 include::pages/colophon.adoc[]
@@ -44,6 +44,12 @@ include::pages/chapter2.adoc[]
 
 include::pages/chapter3.adoc[]
 
-include::pages/action.adoc[]
+include::pages/chapter4.adoc[]
+
+include::pages/chapter5.adoc[]
+
+include::pages/chapter6.adoc[]
+
+include::pages/chapter7.adoc[]
 
 include::pages/about.adoc[]

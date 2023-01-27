@@ -1,1 +1,13 @@
 = About the author
+
+Sai Subramanyam Upadhyayula is a Software Engineer from India, working in the Netherlands for a Swiss Telecom Giant called Swisscom.
+
+In his professional experience, he worked in several roles across the Software Engineering Lifecycles and worked with several technologies like Java, Spring Boot, Spring Cloud, Typescript, Angular, HTML, CSS, Java Script, Golang and Devops Tooling.
+
+He is a published author of the book - "Beginning Spring Boot 3: Build Dynamic Cloud-Native Java Applications and Microservices", you can read the book here if you are interested - https://link.springer.com/book/10.1007/978-1-4842-8792-7
+
+You can follow him at:
+
+* Twitter - https://twitter.com/sai90_u
+* Github - https://github.com/SaiUpadhyayula
+* Linkedin - https://www.linkedin.com/in/sai-upadhyayula/

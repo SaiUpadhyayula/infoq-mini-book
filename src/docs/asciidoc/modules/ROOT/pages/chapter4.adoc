@@ -57,7 +57,7 @@ Finally, we have the `User.java` class which looks like below:
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Expense {
+public class User {
     private String id;
     private String userName;
     private String password;
@@ -112,14 +112,14 @@ import org.springframework.data.mongodb.repository.Query;
 import java.util.Optional;
 
 
-public interface ExpenseRepository extends MongoRepository<Expense, String> { <1>
-    @Query("{'name': ?0}") <3>
-    Optional<Expense> findByName(String name); <2>
+public interface ExpenseRepository extends MongoRepository<Expense, String> {
 }
 
 ----
 
-The `MongoRepository.java` brings in lot of functionality to our `ExpenseRepository.java` class,
+We have an interface called `ExpenseRepository` which extends the `MongoRepository.java` interface which brings in a lot of functionality to our `ExpenseRepository.java`
+
+Now let's learn a bit more about the `MongoRepository` interface.
 
 [source,java]
 ----
@@ -146,7 +146,7 @@ public interface MongoRepository<T, ID> extends ListCrudRepository<T, ID>, ListP
 
 ----
 
-It inherits all the above-mentioned methods you see in the `MongoRepository.java` class, and `Spring Data` will provide implementations to this method at run-time.
+The `ExpenseRepository` interface inherits all the above-mentioned methods you see in the `MongoRepository.java` class, and `Spring Data` will provide implementations to this method at run-time.
 
 So you need not worry about opening a Database connection, writing the logic to perform necessary database operations and finally closing the Database Connection. Everything is handled for us by `Spring Data`. Pretty cool, right ?
 
@@ -276,7 +276,7 @@ public class ExpenseController {
 
     @PutMapping <5>
     @ResponseStatus(HttpStatus.OK)
-    public void updateExpense(@RequestBody Expense expense) {
+    public void updateExpense(@RequestBody ExpenseDto expense) {
         expenseService.updateExpense(expense);
     }
 
@@ -286,10 +286,10 @@ public class ExpenseController {
         return expenseService.getAllExpenses();
     }
 
-    @GetMapping("/{name}") <6>
+    @GetMapping("/{id}") <6>
     @ResponseStatus(HttpStatus.OK)
-    public ExpenseDto getExpenseByName(@PathVariable String name) {
-        return expenseService.getExpense(name);
+    public ExpenseDto getExpense(@PathVariable String id) {
+        return expenseService.getExpense(id);
     }
 
     @DeleteMapping("/{id}") <7>
@@ -359,6 +359,8 @@ There are 2 main reasons for using a Data Transfer Object:
 2. APIs evolve overtime and needs to handle different kinds of data which are not part of the Domain Model. For example, in the future we may want to add a different field in the Request Body, but we don't need to store it in the database. In that case, we can just add the field to the `ExpenseDto` and need not touch the `Expense` object.
 ****
 
+=== Creating ExpenseService
+
 Now let's also create a class called `ExpenseService.java` which is responsible to handle the actual business logic to perform CRUD operations for the Expense :
 
 [source, java]
@@ -366,6 +368,7 @@ Now let's also create a class called `ExpenseService.java` which is responsible 
 package com.programming.techie.expensetracker.service;
 
 import com.programming.techie.expensetracker.dto.ExpenseDto;
+import com.programming.techie.expensetracker.exception.ExpenseNotFoundException;
 import com.programming.techie.expensetracker.model.Expense;
 import com.programming.techie.expensetracker.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
@@ -388,29 +391,30 @@ public class ExpenseService {
         return expenseRepository.insert(expense).getId();
     }
 
-    public void updateExpense(Expense expense) {
-        Expense savedExpense = expenseRepository.findById(expense.getId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+    public void updateExpense(ExpenseDto expenseDto) { <3>
+        Expense expense = mapFromDto(expenseDto);
+        Expense savedExpense = expenseRepository.findById(expenseDto.getId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 String.format("Cannot Find Expense by ID %s", expense.getId())));
         savedExpense.setExpenseName(expense.getExpenseName());
         savedExpense.setExpenseCategory(expense.getExpenseCategory());
         savedExpense.setExpenseAmount(expense.getExpenseAmount());
 
-        expenseRepository.save(expense);
+        expenseRepository.save(savedExpense);
     }
 
-    public ExpenseDto getExpense(String name) {
-        Expense expense = expenseRepository.findByName(name)
-                .orElseThrow(() -> new RuntimeException(String.format("Cannot Find Expense by Name - %s", name)));
+    public ExpenseDto getExpense(String id) { <4>
+        Expense expense = expenseRepository.findById(id)
+                .orElseThrow(() -> new ExpenseNotFoundException(String.format("Cannot Find Expense by ID - %s", id)));
         return mapToDto(expense);
     }
 
-    public List<ExpenseDto> getAllExpenses() {
+    public List<ExpenseDto> getAllExpenses() { <5>
         return expenseRepository.findAll()
                 .stream()
                 .map(this::mapToDto).collect(Collectors.toList());
     }
 
-    public void deleteExpense(String id) {
+    public void deleteExpense(String id) { <6>
         expenseRepository.deleteById(id);
     }
 
@@ -433,4 +437,187 @@ public class ExpenseService {
 }
 
 ----
+
+<1> The `ExpenseService` class is annotated with `@Service` annotation which denotes that this class is supposed to be a Service, Spring Boot will then create an object (Bean) for this class during the application start-up.
+<2> The `addExpense` method takes an `ExpenseDto` class and maps the `ExpenseDto` object to an `Expense` object, which is passed to the `insert` method of the `ExpenseRepository` Spring Data Repository Interface.
+<3> We have the `updateExpense` which takes in an `ExpenseDto` object similar to `addExpense`, maps it to `Expense` object and saves the updated `Expense` object back to the database using the `ExpenseRepository.save()` method.
+<4> Next, we have the `getExpense` method which retrieves the `Expense` based on the id, using the `findById` method in the `ExpenseRepository`, inherited from the `MongoRepository` method. If the expense is not found with a given id, we throw an `ExpenseNotFoundException`
+<5> The `getAllExpenses` method, retrieves all the expenses present in our database and maps the response to `ExpenseDto` objects, before returning it back in the form of a `List`.
+<6> Lastly, we have the `deleteExpense` method which takes in an `id` of the `Expense` object, and deletes the `Expense`.
+
+WARNING: Use findAll() method judiciously in your production apps, this will read all the documents in the database, if you are dealing with a pretty big database, then your database will take a lot of time to retrieve all the records.
+
+Lastly, here is how our `ExpenseNotFoundException` class looks like:
+
+[source,java]
+----
+package com.programming.techie.expensetracker.exception;
+
+public class ExpenseNotFoundException extends RuntimeException {
+    public ExpenseNotFoundException(String message) {
+        super(message);
+    }
+}
+
+----
+
+== Implement Validation for our REST API
+
+So we built the basic REST API, but we can improve this API by adding input validation.
+
+As of now, we can send all kinds of invaild input to our REST API.
+
+Input Validation is very essential to make sure you don't have invalid data in your database.
+
+In Chapter-2, we added the validation starter which adds the validation capabilities to our Spring Boot REST API.
+
+Here are some validation rules we are going to implement:
+
+* Expense ID Should not be null/empty, and it should only accept alphanumeric characters.
+* Expense Name should not be null/empty, and it should only accept alphabets from a-z and A-Z.
+* Expense Amount should accept only a minimum value of 0.
+
+We have several annotations which will communicate our intent for validation. Eg:
+
+* @NotNull as the name suggest makes sure that the value is Not Null
+* @NotEmpty makes sure that the value is Not Empty.
+* @NotBlank makes sure that the value is Not Empty and Not Null.
+* Similar, we have @Pattern annotation which takes in Regular expression to validate the input.
+* Finally, we have the @Min annotation, which makes sure that the provided value falls above the minimum range.
+
+Our `ExpenseDto.java` class looks like below, after adding the necessary annotations for the validation.
+
+[source, java]
+----
+package com.programming.techie.expensetracker.dto;
+
+import com.programming.techie.expensetracker.model.ExpenseCategory;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ExpenseDto {
+    @NotBlank
+    @Pattern(regexp = "[A-Za-z0-9]+")
+    private String id;
+    @NotBlank
+    @Pattern(regexp = "[a-zA-Z]")
+    private String expenseName;
+    private ExpenseCategory expenseCategory;
+    @Min(value = 0)
+    private BigDecimal expenseAmount;
+}
+
+----
+
+== Perform Manual Tests on our API
+
+So we finished the basic implementation of our REST API, now let's go ahead and start the `ExpenseTrackerApplication` and test out our API using an HTTP Client.
+
+You can use any HTTP Client to perform tests, I am using https://www.postman.com/[Postman], but you can use any HTTP Client you like.
+
+To run the application, type the below command, or start the `ExpenseTrackerApplication` class in your favourite IDE.
+
+If you are using Linux/macOS
+[source, bash]
+----
+./mvnw spring-boot:run
+----
+
+If you are using Windows
+[source, shell]
+----
+./mvnw.cmd spring-boot:run
+----
+
+=== Testing `POST` Requests
+
+As we don't have any existing data in our application, let's start our test by creating some expenses.
+
+I am going to send a `POST` request with the below Request Body:
+
+[source, json]
+----
+{
+    "expenseName": "Movies with friends",
+    "expenseCategory": "ENTERTAINMENT",
+    "expenseAmount": 100
+}
+----
+
+to the URL: `http:localhost:8080/api/expense`
+
+This request should return an empty response body with HTTP Status as `201 Created`, you should also observe that in the `Location` header we can also see the URL to access the created `Expense`.
+
+image::Manual_Test_POST.png[Manual Test for POST call]
+
+=== Testing `GET` Requests
+
+So now let's test the GET requests by calling the two available endpoints:
+
+* The Get All Expenses Endpoint
+* The Get Expense Endpoint which takes in the Expense Id as path variable.
+
+==== Testing Get All Expense Endpoint
+
+Let's make a HTTP GET request to the URL - http://localhost:8080/api/expense
+
+It should return the `Expense` we created before.
+
+You can also create some other expenses using the above `POST` endpoint to test, whether the endpoint is indeed returning all `Expense` objects or not.
+
+==== Testing Get Expense Endpoint
+
+For this, we already have the URL, from the `Location` header when we made the `POST` request, just copy the URL and paste it in your HTTP Client.
+
+You should see be able to see the given expense.
+
+=== Testing `PUT` Request
+
+Now let's try to update the name of the expense from "Movies with Friends" to "Concert with Friends", as we are making a `PUT` request, we have to send the whole Request Body again, to make sure that only `expenseName` attribute is updated.
+
+[source,json]
+----
+{
+    "expenseName": "Concert with Friends",
+    "expenseCategory": "ENTERTAINMENT",
+    "expenseAmount": 100
+}
+----
+
+You should see an empty response with HTTP Status as `200 OK`
+
+Let's access the Get Expense Endpoint again and verify if we see the updated `Expense` name (or) not.
+
+image::Manual_Test_PUT_And_Get.png[Testing PUT Request]
+
+As you can see, the `expenseName` attribute is updated successfully.
+
+=== Testing `DELETE` Request
+
+Now let's go ahead and test the last and final endpoint - to delete an `Expense`.
+
+We are going to make a request to the http://localhost:8080/api/expense/<your-expense-id>[http://localhost:8080/api/expense/<your-expense-id>]
+
+And you should receive an empty response with HTTP Status as `204-No Content`
+
+You can also verify if the delete operation worked correctly (or) not by querying the Get Expense Endpoint (or) Get All Expenses Endpoint.
+
+== Summary
+
+In this chapter, we covered a lot, starting with creating our Domain Model, installing and configuring MongoDB in our application, creating Repository, Service and Controller classes to manage our Expense objects.
+
+Finally, we also performed some manual tests using `Postman`.
+
+But we still don't have Automated tests in our application, in the next chapter, we will learn how to write Automated Unit and Integration Tests for our Expense Tracker API.
 

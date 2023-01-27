@@ -5,11 +5,11 @@ nav:
   - modules/ROOT/nav.adoc
 asciidoc:
   attributes:
-    page-og-image: https://pbs.twimg.com/media/Du0e4qrXQAAZ6gB?format=jpg&name=medium
-    book-title: My Book
-    author: Your Name
+    page-og-image:
+    book-title: Building REST API with Spring Boot
+    author: Sai Upadhyayula
     revnumber: 1.0
-    revyear: 2021
-    email: youremail@...
-    subject: Whatever
-    keywords: Something, Else
+    revyear: 2023
+    email: programmingtechie@gmail.com
+    subject: Learn how to build REST API with Spring Boot
+    keywords: Spring Boot, REST, API

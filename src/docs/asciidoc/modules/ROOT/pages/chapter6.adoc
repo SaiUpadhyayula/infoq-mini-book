@@ -1,0 +1,294 @@
+[[chapter-6]]
+= Documenting REST API using OpenAPI 3.0
+
+In this chapter, we are going to learn how to document our REST APIs.
+
+== Why should we document our REST APIs?
+
+In the real world, consumers of an API should have a good understanding of the REST APIs they are using. Having good documentation is vital in helping the users to use the API effectively.
+
+Having good documentation for our REST APIs is necessary. On the other hand, maintaining the documentation manually is tiresome and error-prone.
+
+== Generating REST API Documentation using OpenAPI
+
+The Springdoc Openapi project makes this process of generating REST API documentation quick and painless. Using these tools, we can automate the process of documentation.
+
+Specifically, the `springdoc-openapi` library helps to automate the generation of API documentation by scanning application at runtime to infer API semantics based on spring configurations, class structure and various annotations.
+
+It uses Swagger under the hood to expose a Web UI where we can browse through the endpoints defined in our Spring Boot Application.
+
+=== What is Swagger?
+So what is Swagger? It is an OPEN API specification that is created as a standard to describe your REST API.
+
+=== Adding `springdoc-openapi` Dependencies to project
+
+Inside our `pom.xml` file, add the following maven dependencies. This should download the required `springdoc-openapi` dependencies to our project.
+
+[source,xml]
+----
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.0.2</version>
+        </dependency>
+----
+* The `springdoc-openapi-starter-webmvc-ui` dependency adds the swagger-ui webjar files to our project, and provides us a Swagger based UI to view the REST API documentation. You can see how it looks like in the next section.
+
+[source, xml]
+----
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+            <version>2.0.2</version>
+        </dependency>
+----
+* If you just want to expose the API Documentation as an API response itself, instead of the UI, then you can use the `springdoc-openapi-starter-webmvc-api` dependency.
+
+=== Configure Swagger UI Endpoints
+
+After adding the above dependency, we can configure the Swagger UI Endpoint, by adding the below property:
+
+[source, properties]
+----
+springdoc.swagger-ui.path=/swagger-ui.html
+----
+
+By adding this property, you can find the REST API Documentation UI at the link - http://localhost:8080/swagger-ui.html[http://localhost:8080/swagger-ui.html]
+
+This is how the documentation UI looks like:
+
+image::swagger-ui.png[Swagger UI]
+
+=== Configure Swagger Docs API Endpoints
+
+We can configure the Swagger API Endpoint, by adding the below property:
+
+[source, properties]
+----
+springdoc.api-docs.path=/api-docs
+----
+
+By adding this property, you can find the REST API Documentation at the link - http://localhost:8080/swagger-ui.html[http://localhost:8080/api-docs]
+
+image::swagger-api.png[Swagger API]
+
+== Customizing the Swagger Properties
+
+If you observe the Swagger UI carefully, we see that the heading says - OpenAPI definition which is a bit generic and out of the box text from the library.
+
+In a real world setup, you want to change this according to your application/API.
+
+We can customize this properties by defining a custom bean in our spring boot application. For that let's create a class called `OpenApiConfiguration.java` inside a package called `config`.
+
+[source,java]
+----
+package com.programming.techie.expensetracker.config;
+
+import io.swagger.v3.oas.models.ExternalDocumentation;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OpenAPIConfiguration {
+
+    @Bean
+    public OpenAPI expenseAPI() {
+        return new OpenAPI()
+                .info(new Info().title("Expense Tracker API")
+                        .description("Expense Tracker Application")
+                        .version("v0.0.1")
+                        .license(new License().name("Apache 2.0").url("https://expense-tracker.org")))
+                .externalDocs(new ExternalDocumentation()
+                        .description("Expense Tracker Wiki Documentation")
+                        .url("https://expensetracker.wiki/docs"));
+    }
+}
+
+----
+
+In the above class, we defined a bean by name `expenseAPI`, which creates an object of class `OpenApi`, which consumes all the necessary information about our application.
+
+You can define various attributes like:
+
+* The Title of the Application / API
+* Description
+* Version
+* License information
+* Links to external documentation along with URL
+
+After adding this bean, we can simply restart our Spring Boot Application and when you open the link http://localhost:8080/swagger-ui.html[http://localhost:8080/api-docs] you can see the custom information in our Documentation:
+
+image::swagger-ui-2.png[Swagger UI with custom attributes]
+
+== Bean Validation Support in Swagger UI
+
+In the Chapter-4, we added Validation capabilities to our REST API, the `springdocs-openapi` library automatically detects this and displays it in our documentation.
+
+For example, this is how our `ExpenseDto.java` class looks like:
+
+[source, java]
+----
+package com.programming.techie.expensetracker.dto;
+
+import com.programming.techie.expensetracker.model.ExpenseCategory;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ExpenseDto {
+    @NotBlank
+    @Pattern(regexp = "[A-Za-z0-9]+")
+    private String id;
+    @NotBlank
+    @Pattern(regexp = "[a-zA-Z]")
+    private String expenseName;
+    private ExpenseCategory expenseCategory;
+    @Min(value = 0)
+    private BigDecimal expenseAmount;
+}
+
+----
+
+You can observe that we are using multiple annotations like:
+* `@NotBlank`
+* `@Pattern`
+* `@Min`
+
+In the Swagger UI, if we observe the `Schemas` section, and expand the ExpenseDto section, you can see that the fields are marked as mandatory, and the required Pattern and minimum value information is populated automatically. Refer to the image below:
+
+image::swagger-ui-schemas.png[Schemas in Swagger UI]
+
+== Adding Custom Documentation for our Endpoints
+
+If you expand any of the GET, POST, PUT, DELETE sections of the endpoints, you can observe that there is no description about the API, in the real world, it's essential to document the behaviour of the endpoints. After all, that's the whole reason to create the documentation :D
+
+We can customize the description of the endpoints with the help of several annotations from the `springdocs-openapi` library using the `@Operation`, `@ApiResponses` and `@ApiResponse` annotations.
+
+Here is a complete example of how `ExpenseController.java` class looks like after adding the above annotations:
+
+[source,java]
+----
+package com.programming.techie.expensetracker.web;
+
+import com.programming.techie.expensetracker.dto.ExpenseDto;
+import com.programming.techie.expensetracker.service.ExpenseService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/expense")
+@RequiredArgsConstructor
+public class ExpenseController {
+
+    private final ExpenseService expenseService;
+
+    @Operation(summary = "Add an Expense")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Expense Created",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ExpenseDto.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid/Bad Request",
+                    content = @Content)})
+    @PostMapping
+    public ResponseEntity<Void> addExpense(@RequestBody ExpenseDto expenseDto) {
+        String expenseId = expenseService.addExpense(expenseDto);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(expenseId)
+                .toUri();
+        return ResponseEntity.created(location)
+                .build();
+    }
+
+    @PutMapping
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Update an Expense")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Expense Updated",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ExpenseDto.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid/Bad Request",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "Expense Not Found",
+                    content = @Content)})
+    public void updateExpense(@RequestBody ExpenseDto expense) {
+        expenseService.updateExpense(expense);
+    }
+
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Get All Expenses")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Get All Expenses",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ExpenseDto.class))})})
+    public List<ExpenseDto> getAllExpenses() {
+        return expenseService.getAllExpenses();
+    }
+
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Get an Expense")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Get Single Expense",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ExpenseDto.class))}),
+            @ApiResponse(responseCode = "404", description = "Expense Not Found",
+                    content = @Content)})
+    public ExpenseDto getExpense(@PathVariable String id) {
+        return expenseService.getExpense(id);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete an Expense")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Expense Deleted",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ExpenseDto.class))}),
+            @ApiResponse(responseCode = "404", description = "Expense Not Found",
+                    content = @Content)})
+    public void deleteExpense(@PathVariable String id) {
+        expenseService.deleteExpense(id);
+    }
+
+}
+
+----
+
+As you can see, the `@Operation` annotation is used to provide a small description of the API and the `@ApiResponses` annotation which takes in a list of `@ApiResponse` values, is used to define the response code as well as additional description about the response code.
+
+After adding the above annotations just restart the application, and you can see the description of the Endpoints in the Swagger UI documentations
+
+image::swagger-ui-endpoint-definition.png[Endpoint Definition]
+
+== Summary
+
+In this chapter, you learned the importance of documenting your REST API, why we need to document our REST APIs, and then implemented the documentation using SpringDocs OpenAPI library.
+
+In the next chapter, we will learn how to handle exceptions in our REST API.
